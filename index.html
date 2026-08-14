@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>尾道・瀬戸内 Well-Being Sunset指数</title>
+<style>
+:root{
+  --abyss:#080e1e;
+  --deep:#0f1c3d;
+  --deep2:#16264f;
+  --line:rgba(158,178,230,.16);
+  --haze:#8d99c4;
+  --paper:#e8edfb;
+  --sun:#ffb03a;
+  --ember:#ff6a3d;
+  --plum:#8a49a6;
+  --sea:#35c8b8;
+  --bad:#5b6690;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:
+    radial-gradient(120% 60% at 50% 0%, #1b2c58 0%, rgba(27,44,88,0) 60%),
+    linear-gradient(180deg,#0b1226 0%, var(--abyss) 100%);
+  background-color:var(--abyss);
+  color:var(--paper);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",system-ui,sans-serif;
+  font-feature-settings:"palt" 1;
+  line-height:1.6;
+  min-height:100vh;
+  padding-bottom:64px;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px}
+
+/* --- 天測暦ふうのユーティリティ書体 --- */
+.mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--haze)}
+
+/* --- ヘッダ --- */
+header{padding:26px 0 14px;border-bottom:1px solid var(--line)}
+h1{font-size:clamp(14px,4.9vw,21px);font-weight:600;letter-spacing:.02em;
+  white-space:nowrap}
+h1 span{color:var(--sun)}
+.sub{margin-top:5px;display:flex;gap:14px;flex-wrap:wrap;align-items:baseline}
+
+/* --- スポット選択 --- */
+.spots{display:flex;gap:7px;overflow-x:auto;padding:14px 18px;margin:0 -18px;
+  scrollbar-width:none}
+.spots::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:8px 14px;border:1px solid var(--line);border-radius:999px;
+  background:rgba(255,255,255,.03);color:var(--haze);font-size:14.5px;cursor:pointer;
+  white-space:nowrap;transition:.18s}
+.chip:hover{color:var(--paper);border-color:rgba(158,178,230,.4)}
+.chip[aria-pressed="true"]{background:var(--paper);color:var(--abyss);border-color:var(--paper);font-weight:600}
+.chip:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+
+/* --- 日没までのカウントダウン --- */
+.count{margin-top:14px;padding:16px 14px 14px;border:1px solid var(--line);border-radius:14px;
+  text-align:center;background:linear-gradient(180deg,rgba(255,176,58,.08),rgba(255,255,255,.02))}
+.count .lab{font-size:18px;font-weight:600;letter-spacing:.09em;color:var(--paper);
+  font-family:inherit;text-transform:none}
+.clock{display:flex;align-items:flex-start;justify-content:center;gap:5px;margin-top:9px}
+.seg{display:flex;flex-direction:column;align-items:center;min-width:58px}
+.seg b{font-size:44px;font-weight:200;line-height:.9;letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;transition:color .4s}
+.seg i{font-style:normal;font-size:10.5px;letter-spacing:.18em;color:var(--haze);margin-top:8px}
+.sep{font-size:34px;font-weight:200;line-height:1.05;opacity:.32}
+.count.soon .seg b{color:var(--sun)}
+
+/* --- ヒーロー：西の空の断面 --- */
+.hero{position:relative;margin-top:6px;border:1px solid var(--line);border-radius:14px;
+  overflow:hidden;background:linear-gradient(180deg,#0c1633 0%,#132348 100%)}
+#sky{display:block;width:100%;height:auto}
+.readout{position:absolute;top:14px;left:16px;z-index:2}
+.score{font-size:64px;line-height:.86;font-weight:200;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums}
+.score em{font-size:22px;font-style:normal;font-weight:300;margin-left:2px;letter-spacing:0}
+.verdict{margin-top:6px;font-size:15px;font-weight:600;letter-spacing:.06em}
+.spotname{position:absolute;right:16px;top:16px;text-align:right;z-index:2}
+.spotname b{display:block;font-size:15.5px;font-weight:600}
+.note{padding:13px 16px;border-top:1px solid var(--line);font-size:14px;color:var(--haze);
+  background:rgba(0,0,0,.18)}
+
+/* --- 時刻の帯 --- */
+.times{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:14px;
+  background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.times div{background:#0d1730;padding:13px 10px}
+.times b{display:block;font-size:22px;font-weight:400;font-variant-numeric:tabular-nums;
+  letter-spacing:.02em;margin-top:3px}
+
+/* --- 汎用カード --- */
+section{margin-top:26px}
+.cap{display:flex;justify-content:space-between;align-items:baseline;
+  padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.cap h2{font-size:15px;font-weight:600;letter-spacing:.08em}
+
+/* --- 島影の奥行き --- */
+.fuji{display:flex;gap:14px;align-items:center;border:1px solid var(--line);
+  border-radius:12px;padding:14px;background:rgba(53,200,184,.05)}
+.mark{flex:0 0 56px;height:56px;border-radius:12px;display:grid;place-items:center;
+  font-size:30px;font-weight:500;background:rgba(53,200,184,.18);color:var(--sea)}
+.mark.warn{background:rgba(255,176,58,.20);color:var(--sun)}
+.mark.off{background:rgba(255,255,255,.10);color:#b6bee0}
+.fuji p{font-size:14px;color:var(--haze);margin-top:2px}
+.fuji b{font-size:16.5px}
+
+/* --- 4日予報 --- */
+.days{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.day{border:1px solid var(--line);border-radius:12px;padding:12px 6px;text-align:center;
+  background:rgba(255,255,255,.025);cursor:pointer;transition:.18s}
+.day:hover{background:rgba(255,255,255,.06)}
+.day[aria-pressed="true"]{border-color:var(--sun);background:rgba(255,176,58,.1)}
+.day .d{font-size:12.5px;color:var(--haze);letter-spacing:.06em}
+.day .v{font-size:29px;font-weight:200;font-variant-numeric:tabular-nums;margin:4px 0 6px}
+.bar{height:3px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:2px}
+
+/* --- 内訳 --- */
+.grp{padding:16px 0 7px}
+.grp:first-child{padding-top:0}
+.wb{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.wb3{grid-template-columns:repeat(3,1fr)}
+.wbc{border:1px solid var(--line);border-radius:12px;padding:12px 11px 13px;
+  background:rgba(255,255,255,.025)}
+.wbc .v{font-size:30px;font-weight:200;line-height:1;margin:8px 0 9px;
+  font-variant-numeric:tabular-nums}
+.wbc p{font-size:12px;color:var(--haze);margin-top:9px;line-height:1.5}
+@media(max-width:560px){.wb{grid-template-columns:repeat(2,1fr)}
+  .wb3{grid-template-columns:repeat(3,1fr)}
+  .wbc{padding:11px 9px 12px}
+  .wbc .v{font-size:26px}}
+
+/* --- ヒント --- */
+.hints{list-style:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  background:rgba(255,255,255,.025)}
+.hints li{display:flex;gap:12px;padding:13px 15px;font-size:14px;line-height:1.65;
+  border-top:1px solid var(--line)}
+.hints li:first-child{border-top:0}
+.hints li b{flex:0 0 62px;color:var(--sun);font-size:12px;font-weight:600;
+  letter-spacing:.08em;padding-top:2px}
+.factor{display:grid;grid-template-columns:104px 1fr 84px;gap:10px;align-items:center;
+  padding:9px 0;font-size:14px}
+.factor .t{color:var(--haze)}
+.factor .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--haze);font-size:12.5px}
+.track{height:7px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}
+.track i{display:block;height:100%;border-radius:3px;transition:width .5s ease}
+
+/* --- 定義 --- */
+details{border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+  background:rgba(255,255,255,.025)}
+summary{cursor:pointer;font-size:15px;font-weight:600;letter-spacing:.04em}
+details p,details li{font-size:13.5px;color:var(--haze);margin-top:8px}
+details ul{padding-left:18px}
+details li{margin-top:5px}
+
+/* --- 通知 --- */
+.hidden{display:none !important}
+footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line)}
+.credit{font-size:14.5px;letter-spacing:.05em;margin-bottom:7px}
+footer a{color:var(--sea);text-decoration:none;border-bottom:1px solid rgba(53,200,184,.45)}
+footer a:hover{color:var(--paper);border-bottom-color:var(--paper)}
+footer a:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+
+/* --- PC：2カラム --- */
+.cols{display:block}
+@media(min-width:900px){
+  .wrap{max-width:1120px;padding:0 24px}
+  .cols{display:grid;grid-template-columns:1.55fr 1fr;gap:28px;align-items:start}
+  .colA>.count{margin-top:4px}
+  .colB>section:first-child{margin-top:4px}
+  .colB section{margin-top:22px}
+  h1{font-size:24px}
+}
+/* --- 地名チップ：広い画面では折り返す --- */
+@media(min-width:700px){
+  .spots{flex-wrap:wrap;overflow-x:visible;row-gap:8px}
+}
+
+@media(max-width:420px){
+  .score{font-size:54px}
+  .factor{grid-template-columns:88px 1fr 76px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>尾道・瀬戸内 <span>Well-Being Sunset指数</span></h1>
+  <div class="sub">
+    <span class="mono" id="today">—</span>
+    <span class="mono">瀬戸内海 / 西に島影</span>
+  </div>
+</header>
+
+<nav class="spots" id="spots" aria-label="観賞地点"></nav>
+
+<div class="cols">
+<div class="colA">
+
+<div class="count" id="count">
+  <span class="lab" id="countLabel">Sunsetまであと</span>
+  <div class="clock">
+    <div class="seg hidden" id="segD"><b id="cD">0</b><i>days</i></div>
+    <span class="sep hidden" id="sepD">:</span>
+    <div class="seg"><b id="cH">--</b><i>hrs</i></div>
+    <span class="sep">:</span>
+    <div class="seg"><b id="cM">--</b><i>min</i></div>
+    <span class="sep">:</span>
+    <div class="seg"><b id="cS">--</b><i>sec</i></div>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="readout">
+    <div class="score" id="score">—<em>%</em></div>
+    <div class="verdict" id="verdict">読み込み中</div>
+  </div>
+  <div class="spotname">
+    <b id="spotName">—</b>
+    <span class="mono" id="spotMeta">—</span>
+  </div>
+  <svg id="sky" viewBox="0 0 720 380" role="img" aria-label="西の空の見え方の模式図"></svg>
+  <div class="note" id="skyNote">—</div>
+</div>
+
+<div class="times">
+  <div><span class="mono">日没</span><b id="tSunset">—</b></div>
+  <div><span class="mono">島影に消える</span><b id="tRidge">—</b></div>
+  <div><span class="mono">薄明終わり</span><b id="tDusk">—</b></div>
+</div>
+
+</div><!-- /colA -->
+
+<div class="colB">
+
+<section>
+  <div class="cap"><h2>島影の奥行き</h2></div>
+  <div class="fuji">
+    <div class="mark" id="fujiMark">—</div>
+    <div>
+      <b id="fujiLabel">—</b>
+      <p id="fujiText">—</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="cap"><h2>4日先まで</h2><span class="mono">日没時の予測</span></div>
+  <div class="days" id="days"></div>
+</section>
+
+<section>
+  <div class="cap"><h2>well-beingな体験のためのヒント</h2><span class="mono" id="hintMeta">—</span></div>
+  <ul class="hints" id="hints"></ul>
+</section>
+
+</div><!-- /colB -->
+</div><!-- /cols -->
+
+<section>
+  <div class="cap"><h2>指数の内訳</h2><span class="mono" id="breakdownDate">—</span></div>
+  <div id="factors"></div>
+</section>
+
+<section>
+  <details>
+    <summary>指数の決め方</summary>
+    <p>日没時刻の前後1時間の気象値を重み付けして、0〜100%で表します。「その日の夕日がどれだけきれいに見えそうか」を表す指標に、瀬戸内の地形に合わせて三つを足しています。</p>
+    <ul>
+      <li><b>西の抜け</b>：尾道水道沿いや瀬戸田港のように、対岸の島が近い場所は空の見える範囲が狭くなるため、同じ天気でも指数が下がります。</li>
+      <li><b>島影に消える時刻</b>：瀬戸内には水平線がありません。太陽は島の稜線に隠れるので、その時刻を別に計算しています。高見山や千光寺山のような高い場所では、島影を見下ろすぶん日没が遅くなります。</li>
+      <li><b>島影の奥行き</b>：どこまで見通せるかで、重なって見える島影の枚数が変わります。手前の島だけの日と、四国連山まで見える日があります。断面図の島影も、その日見える枚数だけ描いています。</li>
+    </ul>
+    <p>大きく出ている数字は総合の Well-Being Sunset指数で、四つの副指標の加重和です。見え方 55%／過ごしやすさ 20%／空いている度 13%／アクセス 12%。</p>
+    <ul>
+      <li><b>見え方</b>：下層雲 30%／上層雲 27%／中層雲 15%／視程 14%／降水 8%／湿度 6%の加重和。上層雲が20〜65%かつ下層雲が25%未満なら「焼ける条件」として加点、下層雲が85%を超えると上限を18%に抑えます。</li>
+      <li><b>過ごしやすさ</b>：日没前後の体感温度・風速・降水から算出。夏の瀬戸内は日暮れに風が止む「夕凪」があり、風がないぶん蒸し暑くなるので、6月から9月に無風かつ気温が高い場合は減点しています。</li>
+      <li><b>空いている度</b>：曜日・季節・天気と、地点ごとの平常時の混みやすさからの推定値です。観測データではありません。千光寺公園の桜の時期や、サイクリングの季節は下げています。</li>
+      <li><b>アクセス</b>：最寄り駅・港からの距離と駐車場の有無による固定値。日によって変わりません。</li>
+    </ul>
+    <p>気象データは Open-Meteo（1時間値・日本時間）。太陽の位置は NOAA の計算式で求めています。島影の高さは地点ごとのおおよその値で、実際の稜線を測ったものではありません。</p>
+  </details>
+</section>
+
+<footer>
+  <p class="credit">作成　南雲岳彦</p>
+  <span class="mono"><a href="https://creativecommons.org/licenses/by/4.0/deed.ja"
+    target="_blank" rel="license noopener noreferrer">CC BY 4.0</a> ／ Data: Open-Meteo ／ 太陽位置: NOAA algorithm</span>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+const D2R=Math.PI/180, R2D=180/Math.PI;
+
+/* ============================================================
+   1. 地点定義　—　尾道市（本土・向島・因島・生口島・百島）
+   islandAlt: 西にかかる島影のおおよその見かけの高さ（度）
+   elev     : 標高（高いほど遠くの島影まで見える）
+   ============================================================ */
+const SPOTS=[
+ {id:"senkoji",  name:"千光寺公園 頂上展望台", lat:34.4113, lon:133.1956, elev:140, islandAlt:0.9, westOpen:1.00, calm:45, access:82, peak:[3,4],
+  accessNote:"JR尾道駅から徒歩約15分、またはロープウェイ約3分。",
+  note:"全長63mの展望デッキ。尾道水道と瀬戸内の島々を見下ろす、尾道いちばんの展望台です。"},
+ {id:"jodoji",   name:"浄土寺山展望台", lat:34.4137, lon:133.2160, elev:179, islandAlt:0.8, westOpen:0.95, calm:78, access:58,
+  accessNote:"JR尾道駅から車で約10分。登山道を徒歩約20分。",
+  note:"尾道三山のひとつ、標高178.8m。斜めに横切る尾道水道が金色に光ります。"},
+ {id:"suido",    name:"尾道水道・駅前桟橋", lat:34.4045, lon:133.1930, elev:3, islandAlt:1.4, westOpen:0.75, calm:62, access:92,
+  accessNote:"JR尾道駅から徒歩約3分。",
+  note:"水面と同じ高さから見る夕景。対岸の造船所のクレーンが影絵になります。"},
+ {id:"iwashi",   name:"岩子島 厳島神社（向島）", lat:34.3944, lon:133.1520, elev:5, islandAlt:1.1, westOpen:0.95, calm:76, access:54,
+  accessNote:"向島から岩子島大橋を渡って車で約10分。",
+  note:"浜に立つ鳥居越しの夕日。潮が引くと砂浜が広がります。"},
+ {id:"takami",   name:"高見山展望台（向島）", lat:34.3672, lon:133.1897, elev:283, islandAlt:0.5, westOpen:1.00, calm:70, access:50,
+  accessNote:"JR尾道駅前からバス、高見山登山口下車で徒歩約40分。車なら向島ICから約15分。",
+  note:"標高283m。因島大橋と瀬戸の島々を一望でき、晴れた日は四国連山まで見えます。"},
+ {id:"ohamazaki",name:"大浜崎灯台（因島）", lat:34.3480, lon:133.1830, elev:20, islandAlt:1.0, westOpen:0.90, calm:82, access:52,
+  accessNote:"因島大橋から車で約5分。駐車場から徒歩約10分。",
+  note:"布刈瀬戸の潮流を見下ろす明治期の灯台。船の往来が絶えません。"},
+ {id:"innoshima",name:"因島大橋記念公園（因島）", lat:34.3405, lon:133.1770, elev:40, islandAlt:1.0, westOpen:0.88, calm:74, access:66,
+  accessNote:"因島北ICから車で約5分。駐車場があります。",
+  note:"橋の主塔を真下から見上げる公園。夕日が橋のケーブルを透かします。"},
+ {id:"shirataki",name:"白滝山（因島）", lat:34.3120, lon:133.1790, elev:226, islandAlt:0.6, westOpen:1.00, calm:72, access:56,
+  accessNote:"因島北ICから車で約15分。駐車場から徒歩約10分。",
+  note:"五百羅漢が並ぶ山頂。石仏越しに、島々へ沈む夕日が見られます。"},
+ {id:"sunset",   name:"瀬戸田サンセットビーチ（生口島）", lat:34.3010, lon:133.0565, elev:3, islandAlt:1.2, westOpen:1.00, calm:68, access:62, peak:[7,8],
+  accessNote:"瀬戸田港から車で約10分。しまなみ海道のサイクリングコース沿いです。",
+  note:"800mの白い砂浜。日本の水浴場88選で、名前のとおり夕日の浜です。"},
+ {id:"setoda",   name:"耕三寺前・瀬戸田港（生口島）", lat:34.3010, lon:133.0930, elev:5, islandAlt:2.2, westOpen:0.68, calm:64, access:74,
+  accessNote:"尾道港から高速船約40分。しおまち商店街のすぐそばです。",
+  note:"港と町並みの向こうに夕日。高根島が近いので、日が消えるのは早めです。"},
+ {id:"momoshima",name:"百島", lat:34.3550, lon:133.2200, elev:10, islandAlt:1.2, westOpen:0.85, calm:90, access:34,
+  accessNote:"尾道港から定期船で約35分。最終便の時刻を必ず確かめてください。",
+  note:"定期船でしか行けない島。人の少なさでは尾道随一です。"}
+];
+
+/* 島影の層。手前から順に、どこまで見通せるかで見える枚数が変わる */
+const LAYERS=[[3,"対岸の島影"],[10,"近くの島々"],[22,"しまなみの島々"],[38,"遠い島影"],[55,"四国連山"]];
+
+/* ============================================================
+   2. 太陽位置（NOAA）
+   ============================================================ */
+const mod360=x=>((x%360)+360)%360;
+function refraction(alt){
+  if(alt<-1.2) return 0;
+  return (1.02/Math.tan((alt+10.3/(alt+5.11))*D2R))/60;
+}
+function sunPos(date,lat,lon){
+  const jd=date.getTime()/86400000+2440587.5;
+  const T=(jd-2451545)/36525;
+  const L0=mod360(280.46646+T*(36000.76983+T*0.0003032));
+  const M=357.52911+T*(35999.05029-0.0001537*T);
+  const e=0.016708634-T*(0.000042037+0.0000001267*T);
+  const C=Math.sin(M*D2R)*(1.914602-T*(0.004817+0.000014*T))
+        +Math.sin(2*M*D2R)*(0.019993-0.000101*T)
+        +Math.sin(3*M*D2R)*0.000289;
+  const appLong=L0+C-0.00569-0.00478*Math.sin((125.04-1934.136*T)*D2R);
+  const meanOb=23+(26+(21.448-T*(46.815+T*(0.00059-T*0.001813)))/60)/60;
+  const ob=meanOb+0.00256*Math.cos((125.04-1934.136*T)*D2R);
+  const dec=Math.asin(Math.sin(ob*D2R)*Math.sin(appLong*D2R))*R2D;
+  const y=Math.pow(Math.tan(ob/2*D2R),2);
+  const eq=4*R2D*(y*Math.sin(2*L0*D2R)-2*e*Math.sin(M*D2R)
+      +4*e*y*Math.sin(M*D2R)*Math.cos(2*L0*D2R)
+      -0.5*y*y*Math.sin(4*L0*D2R)-1.25*e*e*Math.sin(2*M*D2R));
+  const utcMin=date.getUTCHours()*60+date.getUTCMinutes()+date.getUTCSeconds()/60;
+  const tst=((utcMin+eq+4*lon)%1440+1440)%1440;
+  const ha=tst/4-180;
+  const latR=lat*D2R, decR=dec*D2R, haR=ha*D2R;
+  let cosZ=Math.sin(latR)*Math.sin(decR)+Math.cos(latR)*Math.cos(decR)*Math.cos(haR);
+  cosZ=Math.max(-1,Math.min(1,cosZ));
+  const z=Math.acos(cosZ);
+  let alt=90-z*R2D;
+  alt+=refraction(alt);
+  let az;
+  const den=Math.cos(latR)*Math.sin(z);
+  if(Math.abs(den)<1e-9){ az=180; }
+  else{
+    let c=(Math.sin(latR)*Math.cos(z)-Math.sin(decR))/den;
+    c=Math.max(-1,Math.min(1,c));
+    const a=Math.acos(c)*R2D;
+    az=(ha>0)?mod360(a+180):mod360(540-a);
+  }
+  return {alt,az};
+}
+/* 夕方：太陽高度が h になる時刻（12:00〜21:00 JST は単調減少） */
+function timeAtAltitude(dayStartUTC,lat,lon,h){
+  let lo=dayStartUTC+12*3600e3, hi=dayStartUTC+21*3600e3;
+  if(sunPos(new Date(lo),lat,lon).alt<h) return null;
+  if(sunPos(new Date(hi),lat,lon).alt>h) return null;
+  for(let i=0;i<40;i++){
+    const mid=(lo+hi)/2;
+    if(sunPos(new Date(mid),lat,lon).alt>h) lo=mid; else hi=mid;
+  }
+  return new Date((lo+hi)/2);
+}
+
+/* ============================================================
+   3. 西の島影
+   ============================================================ */
+function horizonDip(elev){
+  const R=7.324e6;
+  return -R2D*Math.acos(R/(R+Math.max(0,elev)));
+}
+function ridgeAlt(az,spot){
+  spot=spot||state.spot;
+  return Math.max(0.05, horizonDip(spot.elev||0)+spot.islandAlt);
+}
+const COMPASS=["北","北北東","北東","東北東","東","東南東","南東","南南東",
+  "南","南南西","南西","西南西","西","西北西","北西","北北西"];
+const compass=az=>COMPASS[Math.round(mod360(az)/22.5)%16];
+
+/* 見通せる距離と、そこまでに見える島影の層 */
+function depthOfIslands(m,spot){
+  let reach=m.visKm*(1+Math.min(0.35,(spot.elev||0)/1200));
+  if(m.rh>88) reach*=0.7; else if(m.rh>78) reach*=0.85;
+  if(m.low>60) reach*=0.6;
+  const usable=LAYERS.filter(([d])=>d<55||(spot.elev||0)>=150);
+  let name=usable[0][1], count=0;
+  usable.forEach(([d,n])=>{ if(reach>=d){ name=n; count++; } });
+  const v=Math.max(0,Math.min(100,Math.round(pw(reach,[[3,10],[8,30],[15,50],[25,70],[40,88],[60,100]]))));
+  let mark;
+  if(count>=4) mark="◎"; else if(count===3) mark="○"; else if(count===2) mark="△"; else mark="×";
+  return {v,mark,reach,name,count,layers:usable};
+}
+
+/* ============================================================
+   4. 日本時間の暦日
+   ============================================================ */
+const WD="日月火水木金土";
+function jstDay(dateStr){
+  const [Y,M,D]=dateStr.split("-").map(Number);
+  return {Y,M,D, wd:new Date(Date.UTC(Y,M-1,D)).getUTCDay(), startUTC:Date.UTC(Y,M-1,D)-9*3600e3};
+}
+
+/* ============================================================
+   5. 指数モデル
+   ============================================================ */
+function pw(x,pts){
+  if(x==null||isNaN(x)) x=pts[Math.floor(pts.length/2)][0];
+  if(x<=pts[0][0]) return pts[0][1];
+  for(let i=1;i<pts.length;i++){
+    if(x<=pts[i][0]){
+      const [x0,y0]=pts[i-1],[x1,y1]=pts[i];
+      return y0+(y1-y0)*(x-x0)/(x1-x0);
+    }
+  }
+  return pts[pts.length-1][1];
+}
+const WEIGHTS={low:.30,high:.27,mid:.15,vis:.14,pcp:.08,hum:.06};
+const WB={look:.55, comfort:.20, quiet:.13, access:.12};
+
+function sunsetScore(m,spot){
+  const s={};
+  s.low =pw(m.low ,[[0,100],[10,97],[25,80],[40,60],[60,36],[80,16],[100,4]]);
+  s.high=pw(m.high,[[0,28],[10,58],[25,92],[40,100],[60,97],[75,80],[90,52],[100,34]]);
+  s.mid =pw(m.mid ,[[0,66],[15,88],[30,100],[45,92],[60,70],[80,38],[100,18]]);
+  s.vis =pw(m.visKm,[[3,8],[7,30],[10,48],[15,66],[20,82],[25,93],[35,100],[80,100]]);
+  s.pcp = m.pcp>=1?8 : m.pcp>=0.3?28 : m.pcp>0?55 : 100;
+  s.hum =pw(m.rh  ,[[20,88],[40,100],[55,96],[70,78],[80,58],[90,32],[100,16]]);
+  let base=0;
+  for(const k in WEIGHTS) base+=WEIGHTS[k]*s[k];
+  const bonus=[];
+  if(m.high>=20&&m.high<=65&&m.low<25&&m.mid<60){ base+=7; bonus.push("焼ける雲の条件がそろっています"); }
+  if(m.pcpDay>=1&&m.pcp===0){ base+=5; bonus.push("日中の雨あがりで空気が澄みます"); }
+  if(m.low>=85) base=Math.min(base,18);
+  if(m.total>=95&&m.high<20) base=Math.min(base,20);
+  base*=(0.82+0.18*spot.westOpen);
+  return {value:Math.max(0,Math.min(100,Math.round(base))), parts:s, bonus};
+}
+function verdictColor(v){
+  if(v>=85) return "#ffb03a";
+  if(v>=70) return "#ff9a3a";
+  if(v>=55) return "#ff6a3d";
+  if(v>=40) return "#b06bb0";
+  if(v>=25) return "#6f7ba8";
+  return "#5b6690";
+}
+function verdictLabel(v){
+  if(v>=85) return "絶好";
+  if(v>=70) return "かなり期待できる";
+  if(v>=55) return "期待できる";
+  if(v>=40) return "ふつう";
+  if(v>=25) return "厳しい";
+  return "期待薄";
+}
+/* 過ごしやすさ。瀬戸内は夏の夕方に風が止まる「夕凪」がある */
+function comfortScore(m,dj){
+  const t=pw(m.app ,[[-5,5],[3,26],[10,56],[16,88],[20,100],[26,92],[30,60],[34,24],[40,8]]);
+  let w=pw(m.wind,[[0,100],[3,96],[5,84],[7,66],[9,45],[12,22],[18,6]]);
+  const nagi=(dj.M>=6&&dj.M<=9)&&m.wind<2.2&&m.temp>=26;
+  if(nagi) w*=0.5;
+  const r= m.pcp>=1?10 : m.pcp>=0.3?40 : m.pcp>0?70 : 100;
+  return {v:Math.round(0.45*t+0.35*w+0.20*r), nagi,
+    text:`体感 ${m.app.toFixed(0)}℃／風 ${m.wind.toFixed(1)}m/s${nagi?"（夕凪）":""}${m.pcp>0?"／降水あり":""}`};
+}
+function quietScore(m,spot,dj){
+  let v=spot.calm; const why=[];
+  if(dj.wd===0||dj.wd===6){ v-=17; why.push("週末"); }
+  else if(dj.wd===5){ v-=6; }
+  if((spot.peak||[]).includes(dj.M)){ v-=22; why.push(dj.M<=4?"桜のシーズン":"海水浴シーズン"); }
+  else if([5,10,11].includes(dj.M)){ v-=8; why.push("サイクリングの季節"); }
+  else if([1,2,6,12].includes(dj.M)){ v+=9; }
+  if(m.pcp>0){ v+=12; why.push("雨で人が減ります"); }
+  if(m.wind>=8){ v+=5; }
+  v=Math.max(0,Math.min(100,Math.round(v)));
+  return {v, text: why.length?why.join("／"):"平常どおりの人出の見込み"};
+}
+
+/* ============================================================
+   6. データ取得
+   ============================================================ */
+const cache={};
+const HOURLY="cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,visibility,precipitation,wind_speed_10m,temperature_2m,apparent_temperature";
+async function fetchWeather(spot){
+  if(cache[spot.id]) return cache[spot.id];
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${spot.lat}&longitude=${spot.lon}`
+    +`&hourly=${HOURLY}&daily=sunset&wind_speed_unit=ms&timezone=Asia%2FTokyo&forecast_days=4`;
+  const r=await fetch(url);
+  if(!r.ok) throw new Error("weather "+r.status);
+  const j=await r.json();
+  cache[spot.id]=j;
+  return j;
+}
+function estimateVis(rh,pcp){
+  let v=48*(1-Math.pow(Math.max(0,(rh-38))/62,1.4));
+  if(pcp>0) v=Math.min(v,12);
+  return Math.max(3,v);
+}
+function dayMetrics(j,dayIdx){
+  const h=j.hourly, times=h.time;
+  const sunsetStr=j.daily.sunset[dayIdx];
+  const dateKey=sunsetStr.slice(0,10);
+  const sh=parseInt(sunsetStr.slice(11,13),10);
+  const idxOf=hh=>times.indexOf(`${dateKey}T${String(hh).padStart(2,"0")}:00`);
+  const picks=[[idxOf(sh-1),.30],[idxOf(sh),.45],[idxOf(sh+1),.25]].filter(p=>p[0]>=0);
+  const avg=key=>{
+    let s=0,w=0;
+    picks.forEach(([i,ww])=>{ const v=h[key][i]; if(v!=null){s+=v*ww;w+=ww;} });
+    return w?s/w:null;
+  };
+  const rh=avg("relative_humidity_2m")??65;
+  const pcp=picks.reduce((a,[i])=>a+(h.precipitation[i]??0),0);
+  const visM=avg("visibility");
+  const visKm=visM!=null?visM/1000:estimateVis(rh,pcp);
+  let pcpDay=0;
+  for(let hh=11;hh<=16;hh++){ const i=idxOf(hh); if(i>=0) pcpDay+=h.precipitation[i]??0; }
+  return {
+    date:dateKey, sunsetStr,
+    low:avg("cloud_cover_low")??50, mid:avg("cloud_cover_mid")??40,
+    high:avg("cloud_cover_high")??35, total:avg("cloud_cover")??60,
+    rh, visKm, pcp, pcpDay, wind:avg("wind_speed_10m")??3,
+    temp:avg("temperature_2m")??20, app:avg("apparent_temperature")??avg("temperature_2m")??20
+  };
+}
+function fallbackData(spot){
+  const now=new Date();
+  const hourly={time:[],cloud_cover:[],cloud_cover_low:[],cloud_cover_mid:[],
+    cloud_cover_high:[],relative_humidity_2m:[],visibility:[],precipitation:[],
+    wind_speed_10m:[],temperature_2m:[],apparent_temperature:[]};
+  const daily={sunset:[]};
+  let seed=now.getDate()*37+now.getMonth()*11+spot.name.length;
+  const rnd=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return (seed/0x7fffffff); };
+  for(let d=0;d<4;d++){
+    const day=new Date(now.getFullYear(),now.getMonth(),now.getDate()+d);
+    const key=`${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,"0")}-${String(day.getDate()).padStart(2,"0")}`;
+    const dayStartUTC=Date.UTC(day.getFullYear(),day.getMonth(),day.getDate())-9*3600e3;
+    const ss=timeAtAltitude(dayStartUTC,spot.lat,spot.lon,-0.267)||new Date(dayStartUTC+10*3600e3);
+    const jst=new Date(ss.getTime()+9*3600e3);
+    daily.sunset.push(`${key}T${String(jst.getUTCHours()).padStart(2,"0")}:${String(jst.getUTCMinutes()).padStart(2,"0")}`);
+    const baseLow=15+rnd()*55, baseHigh=20+rnd()*50, baseMid=15+rnd()*45;
+    for(let hh=0;hh<24;hh++){
+      hourly.time.push(`${key}T${String(hh).padStart(2,"0")}:00`);
+      const wob=Math.sin(hh/24*Math.PI*2+d)*10;
+      const lo=Math.max(0,Math.min(100,baseLow+wob));
+      const mi=Math.max(0,Math.min(100,baseMid+wob*.6));
+      const hi=Math.max(0,Math.min(100,baseHigh-wob*.4));
+      hourly.cloud_cover_low.push(Math.round(lo));
+      hourly.cloud_cover_mid.push(Math.round(mi));
+      hourly.cloud_cover_high.push(Math.round(hi));
+      hourly.cloud_cover.push(Math.round(Math.min(100,lo*.8+mi*.5+hi*.3)));
+      hourly.relative_humidity_2m.push(Math.round(58+rnd()*28));
+      hourly.visibility.push(null);
+      hourly.precipitation.push(lo>78&&rnd()>.7?0.6:0);
+      const wsp=Math.round(1+rnd()*6);
+      hourly.wind_speed_10m.push(wsp);
+      const seasonT=16-10*Math.cos((day.getMonth())/12*2*Math.PI);
+      const tmp=Math.round((seasonT+Math.sin((hh-4)/24*2*Math.PI)*4)*10)/10;
+      hourly.temperature_2m.push(tmp);
+      hourly.apparent_temperature.push(Math.round((tmp-wsp*0.25)*10)/10);
+    }
+  }
+  return {hourly,daily,_fallback:true};
+}
+
+/* ============================================================
+   7. 描画
+   ============================================================ */
+let state={spot:SPOTS.find(s=>s.id==="senkoji"), dayIdx:0, data:null,
+  offline:false, targets:[], dusks:[], dates:[]};
+const $=id=>document.getElementById(id);
+
+function drawSpots(){
+  const n=$("spots"); n.innerHTML="";
+  SPOTS.forEach(s=>{
+    const b=document.createElement("button");
+    b.className="chip"; b.textContent=s.name;
+    b.setAttribute("aria-pressed", s.id===state.spot.id);
+    b.onclick=()=>{ state.spot=s; state.dayIdx=0; load(); };
+    n.appendChild(b);
+  });
+}
+function fmt(d){
+  const j=new Date(d.getTime()+9*3600e3);
+  return `${String(j.getUTCHours()).padStart(2,"0")}:${String(j.getUTCMinutes()).padStart(2,"0")}`;
+}
+
+/* 西の島影の断面。見通せる距離に応じて島影の層が増える */
+function drawSky(m,score,sunsetTime,ridgeTime,dep){
+  const svg=$("sky");
+  const W=720,H=380, AZ0=232, AZ1=308, ALT_MAX=9, BASE=34;
+  const x=az=>(az-AZ0)/(AZ1-AZ0)*W;
+  const dip=horizonDip(state.spot.elev||0);
+  const y=alt=>(H-BASE)-((alt-dip)/ALT_MAX)*(H-BASE-26);
+  const spot=state.spot;
+  const warm=Math.max(0,Math.min(1,score/100));
+  const p=[];
+  p.push(`<defs>
+    <linearGradient id="skyg" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%"  stop-color="rgb(${Math.round(95+150*warm)},${Math.round(62+58*warm)},${Math.round(72+18*warm)})"/>
+      <stop offset="30%" stop-color="rgb(${Math.round(58+108*warm)},${Math.round(48+48*warm)},${Math.round(96+24*warm)})"/>
+      <stop offset="100%" stop-color="#0f1c3d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(255,190,90,${(.55*warm+.12).toFixed(2)})"/>
+      <stop offset="100%" stop-color="rgba(255,150,60,0)"/>
+    </radialGradient>
+  </defs>`);
+  p.push(`<rect width="${W}" height="${H}" fill="url(#skyg)"/>`);
+  const band=(a0,a1,cov,color)=>{
+    const op=Math.max(0,Math.min(.62,cov/100*.62));
+    return `<rect x="0" y="${y(a1)}" width="${W}" height="${y(a0)-y(a1)}" fill="${color}" opacity="${op.toFixed(3)}"/>`;
+  };
+  p.push(band(4.8,8.9,m.high,"#ffb03a"));
+  p.push(band(2.3,4.6,m.mid ,"#8a49a6"));
+  p.push(band(0.2,2.1,m.low ,"#5b6690"));
+
+  const track=[];
+  for(let k=0;k<=48;k++){
+    const t=new Date(sunsetTime.getTime()-(48-k)*180e3);
+    const sp=sunPos(t,spot.lat,spot.lon);
+    if(sp.alt>dip-0.4&&sp.alt<ALT_MAX) track.push(`${x(sp.az).toFixed(1)},${y(sp.alt).toFixed(1)}`);
+  }
+  if(track.length>1)
+    p.push(`<polyline points="${track.join(" ")}" fill="none" stroke="rgba(255,214,150,.45)" stroke-width="1.2" stroke-dasharray="3 4"/>`);
+
+  const setAz=sunPos(ridgeTime||sunsetTime,spot.lat,spot.lon).az;
+  const sAlt=ridgeAlt(setAz,spot);
+  p.push(`<circle cx="${x(setAz)}" cy="${y(sAlt)}" r="92" fill="url(#glow)"/>`);
+  p.push(`<circle cx="${x(setAz)}" cy="${y(sAlt)}" r="13" fill="#ffd48a" opacity="${(.35+.65*warm).toFixed(2)}"/>`);
+
+  // 島影を奥から手前へ。見通せる層だけ描く
+  const shapes=[[0.30,.30,7],[0.52,.50,5],[0.74,.72,3],[1.00,.95,0]];
+  for(let k=dep.count-1;k>=0;k--){
+    const [f,op,ph]=shapes[Math.min(k,shapes.length-1)];
+    const pts=[];
+    for(let az=AZ0;az<=AZ1;az+=2){
+      const wob=1+0.16*Math.sin((az+ph*11)/9.5)+0.09*Math.sin((az+ph*7)/4.3);
+      pts.push(`${x(az).toFixed(1)},${y(dip+spot.islandAlt*f*wob).toFixed(1)}`);
+    }
+    p.push(`<path d="M 0,${H} L ${pts.join(" L ")} L ${W},${H} Z" fill="#060b1c" opacity="${op}"/>`);
+  }
+  [[247.5,"南西"],[270,"西"],[292.5,"西北西"]].forEach(([az,nm])=>{
+    p.push(`<text x="${x(az)}" y="${H-10}" fill="rgba(200,215,255,.6)" font-size="12"
+      text-anchor="middle" letter-spacing="1.5">${nm}</text>`);
+  });
+  svg.innerHTML=p.join("");
+}
+
+function drawFactors(parts,wb){
+  const box=(t,v,sub)=>{
+    const c=verdictColor(v);
+    return `<div class="wbc"><span class="mono">${t}</span>
+      <div class="v" style="color:${c}">${Math.round(v)}</div>
+      <div class="bar"><i style="width:${Math.round(v)}%;background:${c}"></i></div>
+      <p>${sub}</p></div>`;
+  };
+  const top=[["見え方",wb.look,WB.look],["過ごしやすさ",wb.cf.v,WB.comfort],
+    ["空いている度",wb.qt.v,WB.quiet],["アクセス",wb.access,WB.access]]
+    .map(([t,v,w])=>box(t,v,`重み ${Math.round(w*100)}%`)).join("");
+  const look=[["下層雲","low"],["上層雲","high"],["中層雲","mid"],
+    ["視程","vis"],["降水","pcp"],["湿度","hum"]]
+    .map(([t,k])=>box(t,parts[k],`重み ${Math.round(WEIGHTS[k]*100)}%`)).join("");
+  $("factors").innerHTML=
+    `<div class="grp mono">総合</div><div class="wb">${top}</div>`+
+    `<div class="grp mono">見え方の中身</div><div class="wb wb3">${look}</div>`;
+}
+
+/* well-beingな体験のためのヒント */
+function drawHints(m,sc,wb,spot,dj,t,dep,setAz){
+  const H=[];
+  if(spot.id==="momoshima")
+    H.push(["最終便","定期船でしか帰れません。日が沈んだあとの便の時刻を、行く前に必ず確かめてください。"]);
+  if(t.ridge&&t.dusk){
+    const mins=Math.round((t.dusk-t.ridge)/60000);
+    H.push(["時間",`太陽が島影に消えるのが ${fmt(t.ridge)}、空が暗くなりきるのが ${fmt(t.dusk)}。あいだの ${mins}分 がいちばん色の出る時間です。`]);
+  }
+  H.push(["島影",`今日は約${dep.reach.toFixed(0)}km先まで見通せそうです。${dep.name}まで重なって見えます。`]);
+  if(wb.cf.nagi)
+    H.push(["夕凪","瀬戸内特有の夕凪で、日暮れに風がぱたりと止みます。蒸し暑くなるので、水分と虫よけを持って行ってください。"]);
+  if(sc.value>=80) H.push(["空","焼ける条件がそろっています。太陽が島に隠れたあと20分ほど残ると、空がもう一度赤くなります。"]);
+  else if(sc.value<40) H.push(["空","空の焼けは期待できそうにありません。尾道は坂と路地そのものが見どころなので、街を歩くほうが心地よい日かもしれません。"]);
+  else H.push(["空","雲しだいの日です。日没の30分前から空を見ていると、いちばんいい瞬間を逃しません。"]);
+  if(m.pcp>0) H.push(["雨","日没前後に雨の可能性があります。屋根のある場所を確かめてから出かけてください。"]);
+  else if(m.pcpDay>=1) H.push(["雨あがり","日中の雨で空気が洗われます。島影がいつもより奥まで見える日です。"]);
+  if(m.wind>=8) H.push(["風",`風が ${m.wind.toFixed(0)}m/s と強い予報です。橋の上はとくに風が抜けるので、自転車なら注意してください。`]);
+  if(wb.qt.v<35&&t.ridge) H.push(["混雑",`人出が多そうです。${fmt(new Date(t.ridge.getTime()-40*60000))} ごろに場所を決めておくと、あわてずに済みます。`]);
+  else if(wb.qt.v>72) H.push(["混雑","人はほとんどいない見込みです。ゆっくり座って待てます。"]);
+  if(m.app<=8) H.push(["気温",`体感 ${m.app.toFixed(0)}℃。海風が冷たいので、一枚多めに。`]);
+  else if(m.app>=30) H.push(["気温",`体感 ${m.app.toFixed(0)}℃。日没まで暑さが残ります。水分を持って行ってください。`]);
+  if(spot.access<58) H.push(["帰り","歩く道や船があります。暗くなってからの足を先に確かめておくと安心です。"]);
+
+  $("hintMeta").textContent=spot.name;
+  $("hints").innerHTML=H.slice(0,5).map(([tag,txt])=>`<li><b>${tag}</b><span>${txt}</span></li>`).join("");
+}
+
+async function load(){
+  drawSpots();
+  const spot=state.spot;
+  let j, failed=false;
+  try{ j=await fetchWeather(spot); }
+  catch(e){ j=fallbackData(spot); failed=true; }
+  state.data=j;
+  state.offline = failed || !!j._fallback;
+
+  const metricsAll=[0,1,2,3].map(i=>dayMetrics(j,i));
+  const scores=metricsAll.map(m=>sunsetScore(m,spot));
+  const wbAll=metricsAll.map((m,k)=>{
+    const dj=jstDay(m.date);
+    const look=scores[k].value;
+    const cf=comfortScore(m,dj);
+    const qt=quietScore(m,spot,dj);
+    const total=Math.round(WB.look*look+WB.comfort*cf.v+WB.quiet*qt.v+WB.access*spot.access);
+    return {look,cf,qt,access:spot.access,total};
+  });
+
+  const days=$("days"); days.innerHTML="";
+  metricsAll.forEach((m,i)=>{
+    const dj=jstDay(m.date);
+    const v=wbAll[i].total;
+    const b=document.createElement("button");
+    b.className="day"; b.setAttribute("aria-pressed", i===state.dayIdx);
+    b.innerHTML=`<div class="d">${dj.M}/${dj.D} ${WD[dj.wd]}</div>
+      <div class="v" style="color:${verdictColor(v)}">${v}</div>
+      <div class="bar"><i style="width:${v}%;background:${verdictColor(v)}"></i></div>`;
+    b.onclick=()=>{ state.dayIdx=i; render(metricsAll,scores,wbAll); };
+    days.appendChild(b);
+  });
+  render(metricsAll,scores,wbAll);
+}
+
+function render(metricsAll,scores,wbAll){
+  const spot=state.spot, i=state.dayIdx;
+  const m=metricsAll[i], sc=scores[i], wb=wbAll[i];
+  document.querySelectorAll(".day").forEach((el,k)=>el.setAttribute("aria-pressed",k===i));
+
+  const dj=jstDay(m.date);
+  const dayStartUTC=dj.startUTC;
+  const sunsetTime=new Date(dayStartUTC+(parseInt(m.sunsetStr.slice(11,13))*60+parseInt(m.sunsetStr.slice(14,16)))*60000);
+  const sunAzAtSet=sunPos(sunsetTime,spot.lat,spot.lon).az;
+  const rAlt=ridgeAlt(sunAzAtSet,spot);
+  const ridgeTime=timeAtAltitude(dayStartUTC,spot.lat,spot.lon,rAlt)||sunsetTime;
+  const duskTime=timeAtAltitude(dayStartUTC,spot.lat,spot.lon,-6);
+  const dep=depthOfIslands(m,spot);
+
+  $("today").textContent=`${dj.Y}.${String(dj.M).padStart(2,"0")}.${String(dj.D).padStart(2,"0")}`;
+  $("score").innerHTML=`${wb.total}<em>%</em>`;
+  $("score").style.color=verdictColor(wb.total);
+  $("verdict").textContent=verdictLabel(wb.total);
+  $("verdict").style.color=verdictColor(wb.total);
+  $("spotName").textContent=spot.name;
+  $("spotMeta").textContent=`太陽は${compass(sunAzAtSet)}へ`;
+  $("breakdownDate").textContent=`${dj.M}/${dj.D} 日没前後`;
+
+  $("tSunset").textContent=m.sunsetStr.slice(11,16);
+  $("tRidge").textContent=fmt(ridgeTime);
+  $("tDusk").textContent=duskTime?fmt(duskTime):"—";
+
+  drawSky(m,sc.value,sunsetTime,ridgeTime,dep);
+
+  const notes=[spot.note];
+  if(sc.bonus.length) notes.push(sc.bonus.join("。"));
+  notes.push(`太陽は${compass(sunAzAtSet)}の島影に沈みます。`);
+  $("skyNote").textContent=notes.join(" ");
+
+  $("fujiMark").textContent=dep.mark;
+  $("fujiMark").className="mark"+(dep.v>=50?"":(dep.v>=28?" warn":" off"));
+  $("fujiLabel").textContent=`島影の奥行き ${dep.v}%`;
+  $("fujiText").textContent=`約${dep.reach.toFixed(0)}km先の${dep.name}まで、${dep.count}枚の島影が重なって見えそうです。`;
+
+  state.targets=[]; state.dusks=[]; state.dates=[];
+  metricsAll.forEach(mm=>{
+    const d2=jstDay(mm.date);
+    const st=new Date(d2.startUTC+(parseInt(mm.sunsetStr.slice(11,13))*60+parseInt(mm.sunsetStr.slice(14,16)))*60000);
+    const ra=ridgeAlt(sunPos(st,spot.lat,spot.lon).az,spot);
+    const rt=timeAtAltitude(d2.startUTC,spot.lat,spot.lon,ra);
+    const dt=timeAtAltitude(d2.startUTC,spot.lat,spot.lon,-6);
+    state.targets.push(rt?rt.getTime():st.getTime());
+    state.dusks.push(dt?dt.getTime():null);
+    state.dates.push(d2);
+  });
+  tick();
+
+  drawFactors(sc.parts,wb);
+  drawHints(m,sc,wb,spot,dj,{sunset:sunsetTime,ridge:ridgeTime,dusk:duskTime},dep,sunAzAtSet);
+}
+
+/* ============================================================
+   8. 日没までのカウントダウン
+   ============================================================ */
+function tick(){
+  if(!state.targets.length) return;
+  const now=Date.now();
+  let i=state.dayIdx, target=state.targets[i], dusk=state.dusks[i], label="Sunsetまであと";
+  if(now>=target){
+    if(dusk&&now<dusk){ target=dusk; label="マジックアワー 残り"; }
+    else{
+      const j=state.targets.findIndex(t=>t>now);
+      if(j<0){ $("countLabel").textContent="本日のSunsetは終わりました"; setClock(null); return; }
+      target=state.targets[j];
+      const d=state.dates[j];
+      label=(j===i+1)?"明日のSunsetまであと":`${d.M}/${d.D} のSunsetまであと`;
+    }
+  }
+  $("countLabel").textContent=label;
+  setClock(target-now);
+}
+function setClock(ms){
+  const box=$("count");
+  if(ms==null){ ["cD","cH","cM","cS"].forEach(id=>$(id).textContent="--");
+    $("segD").classList.add("hidden"); $("sepD").classList.add("hidden");
+    box.classList.remove("soon"); return; }
+  const t=Math.max(0,Math.floor(ms/1000));
+  const d=Math.floor(t/86400), h=Math.floor(t%86400/3600),
+        mi=Math.floor(t%3600/60), se=t%60;
+  const pad=n=>String(n).padStart(2,"0");
+  $("segD").classList.toggle("hidden",d===0);
+  $("sepD").classList.toggle("hidden",d===0);
+  $("cD").textContent=d;
+  $("cH").textContent=pad(h); $("cM").textContent=pad(mi); $("cS").textContent=pad(se);
+  box.classList.toggle("soon", t<3600);
+}
+setInterval(tick,1000);
+load();
+
+</script>
+</body>
+</html>
